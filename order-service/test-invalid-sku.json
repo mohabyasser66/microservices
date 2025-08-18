@@ -1,0 +1,14 @@
+{
+    "orderItemsDtoList": [
+        {
+            "skuCode": "iphone-131",
+            "price": 999.99,
+            "quantity": 1
+        },
+        {
+            "skuCode": "samsung-galaxy-s21",
+            "price": 899.99,
+            "quantity": 2
+        }
+    ]
+}
