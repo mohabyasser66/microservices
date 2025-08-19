@@ -6,7 +6,7 @@ import com.order.service.order_service.request.OrderRequest;
 import java.util.List;
 
 public interface IOrderService {
-    void placeOrder(OrderRequest orderRequest);
+    String placeOrder(OrderRequest orderRequest);
 
     List<Order> getAllOrders();
 }

@@ -4,14 +4,16 @@ import com.order.service.order_service.exceptions.ProductNotExist;
 import com.order.service.order_service.model.Order;
 import com.order.service.order_service.request.OrderRequest;
 import com.order.service.order_service.service.IOrderService;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,20 +24,15 @@ public class OrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public String placeOrder(@RequestBody OrderRequest orderRequest) {
-        try {
-        orderService.placeOrder(orderRequest);
-        } catch (ProductNotExist e) {
-            // Handle the case where products are not in stock
-            return "Order could not be placed: " + e.getMessage();
-        } catch (RuntimeException e) {
-            // Handle other runtime exceptions
-            return "An error occurred while placing the order: " + e.getMessage();
-        } catch (Exception e) {
-            // Handle any other exceptions
-            return "An unexpected error occurred: " + e.getMessage();
-        }
-        return "Order placed successfully";
+    @CircuitBreaker(name = "inventory", fallbackMethod = "fallbackMethod")
+    @TimeLimiter(name = "inventory")
+    @Retry(name = "inventory")
+    public CompletableFuture<String> placeOrder(@RequestBody OrderRequest orderRequest) {
+        return CompletableFuture.supplyAsync(() -> orderService.placeOrder(orderRequest));
+    }
+
+    public CompletableFuture<String> fallbackMethod(OrderRequest orderRequest, Throwable throwable) {
+        return CompletableFuture.supplyAsync(() -> "Order could not be placed at this time. Please try again later.");
     }
 
     @GetMapping
@@ -44,12 +41,4 @@ public class OrderController {
         return orderService.getAllOrders();
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        Map<String, Object> healthStatus = new HashMap<>();
-        healthStatus.put("status", "UP");
-        healthStatus.put("service", "order-service");
-        healthStatus.put("timestamp", System.currentTimeMillis());
-        return ResponseEntity.ok(healthStatus);
-    }
 }
