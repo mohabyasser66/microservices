@@ -17,7 +17,7 @@ import java.lang.module.ResolutionException;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
 
     private final IUserService userService;

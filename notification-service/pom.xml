@@ -6,7 +6,7 @@
 		<groupId>com.eshop</groupId>
 		<artifactId>microservices</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.notification.service</groupId>
 	<artifactId>notification-service</artifactId>

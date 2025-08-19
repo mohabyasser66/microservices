@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.4</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 
 	<groupId>com.eshop</groupId>
@@ -29,7 +29,7 @@
 		<url/>
 	</scm>
 	<modules>
-<!--		<module>api-gateway</module>-->
+		<module>api-gateway</module>
 		<module>product-service</module>
 		<module>order-service</module>
 		<module>users-service</module>
