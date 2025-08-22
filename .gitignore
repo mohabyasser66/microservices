@@ -30,3 +30,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Docker ###
+docker-compose.override.yml
+docker-compose.dev.yml
+docker-compose.prod.yml
+docker-compose.local.yml
+docker/
+mysql/
+volume-data/

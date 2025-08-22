@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
-    List<Inventory> findBySkuCodeIn(List<String> skuCode);
-    Inventory findBySkuCode(String skuCode);
-    void deleteBySkuCode(String skuCode);
+    boolean existsBySkuCodeAndQuantityIsGreaterThanEqual(String skuCode, Integer quantity);
+
+    List<Inventory> findBySkuCodeIn(List<String> skuCodes);
 }
