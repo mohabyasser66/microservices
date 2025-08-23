@@ -39,3 +39,4 @@ docker-compose.local.yml
 docker/
 mysql/
 volume-data/
+data/
