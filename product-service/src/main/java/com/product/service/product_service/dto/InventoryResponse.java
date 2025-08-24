@@ -1,17 +1,13 @@
 package com.product.service.product_service.dto;
 
 import lombok.*;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProductResponse {
-    private String id;
+public class InventoryResponse {
     private String skuCode;
-    private String description;
-    private BigDecimal price;
     private Integer quantity;
 }

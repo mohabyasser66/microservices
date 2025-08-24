@@ -10,4 +10,8 @@ public interface IProductService {
 
     List<ProductResponse> getAllProducts();
 
+    ProductResponse getProductById(String id);
+    ProductResponse updateProduct(String id, ProductRequest request);
+    void deleteProduct(String id);
+
 }
