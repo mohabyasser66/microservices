@@ -4,8 +4,12 @@ import com.order.service.order_service.client.InventoryClient;
 import com.order.service.order_service.dto.OrderRequest;
 import com.order.service.order_service.model.Order;
 import com.order.service.order_service.repository.OrderRepository;
+import com.techie.microservices.order.event.OrderPlacedEvent;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +22,7 @@ public class OrderService implements IOrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
     public String placeOrder(OrderRequest orderRequest) {
         boolean isProductInStock = inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
@@ -30,6 +35,14 @@ public class OrderService implements IOrderService {
             order.setSkuCode(orderRequest.skuCode());
             order.setQuantity(orderRequest.quantity());
             orderRepository.save(order);
+            
+            OrderPlacedEvent orderPlacedEvent = new OrderPlacedEvent();
+            orderPlacedEvent.setOrderNumber(order.getOrderNumber());
+            orderPlacedEvent.setEmail(orderRequest.userDetails().email());
+            orderPlacedEvent.setFirstName(orderRequest.userDetails().firstName());
+            orderPlacedEvent.setLastName(orderRequest.userDetails().lastName());
+            log.info("Publishing order placed event to Kafka for order number: {}", order.getOrderNumber());
+            kafkaTemplate.send("order-placed", orderPlacedEvent);
             return "order created successfully";
         } else {
             log.error("Product is out of stock, cannot place order.");

@@ -1,48 +1,44 @@
 package com.notification.service.notification_service.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
 
-import com.notification.service.notification_service.model.Notification;
-import com.notification.service.notification_service.repository.NotificationRepository;
-
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService implements INotificationService {
+@Slf4j
+public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
-    private final EmailService emailService;
+    private final JavaMailSender javaMailSender;
 
-    public Notification sendNotification(Long userId, String type, String subject, String message, String userEmail) {
-        Notification notif = new Notification();
-        notif.setUserId(userId);
-        notif.setType(type);
-        notif.setSubject(subject);
-        notif.setMessage(message);
-        notif.setIsRead(false);
-        notif.setCreatedAt(LocalDateTime.now());
-
-        Notification saved = notificationRepository.save(notif);
-        if ("EMAIL".equalsIgnoreCase(type)) {
-            emailService.sendEmail(userEmail, subject, message);
+    @KafkaListener(topics = "order-placed", groupId = "notification-group")
+    public void listen(com.techie.microservices.order.event.OrderPlacedEvent orderPlacedEvent) {
+        log.info("Got message from order-palced topic {}", orderPlacedEvent);
+        MimeMessagePreparator messagePreparator = mimeMessage -> {
+            MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+            messageHelper.setFrom("user@gmail.com");
+            messageHelper.setTo(orderPlacedEvent.getEmail().toString());
+            messageHelper.setSubject(String.format("Order Placed with number %s", orderPlacedEvent.getOrderNumber()));
+            messageHelper.setText(String.format("""
+                    Hi %s, %s
+                    Your order has been placed successfully.
+                    Order Number: %s
+                    """,
+                    orderPlacedEvent.getFirstName().toString(),
+                    orderPlacedEvent.getLastName().toString(),
+                    orderPlacedEvent.getOrderNumber()));
+        };
+        try {
+            javaMailSender.send(messagePreparator);
+        } catch (Exception e) {
+            log.error("Failed to send email", e);
+            throw new RuntimeException(e);
         }
-
-        return saved;
-    }
-
-    public List<Notification> getUserNotifications(Long userId) {
-        return notificationRepository.findByUserId(userId);
-    }
-
-    public Notification markAsRead(Long id) {
-        Notification notif = notificationRepository.findById(id).orElseThrow();
-        notif.setIsRead(true);
-        return notificationRepository.save(notif);
     }
 }
 
