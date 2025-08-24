@@ -1,6 +1,6 @@
 # E-Shop Microservices Architecture
 
-A production-ready microservices-based e-commerce system built with Spring Boot, featuring service discovery, API gateway, distributed databases, and event-driven communication.
+A production-ready microservices-based e-commerce system built with Spring Boot, featuring API gateway, distributed databases, and event-driven communication.
 
 ---
 
@@ -8,17 +8,16 @@ A production-ready microservices-based e-commerce system built with Spring Boot,
 
 This project implements a microservices architecture with the following key components:
 
-- **Service Discovery**: Eureka Server for service registration and discovery
 - **API Gateway**: Spring Cloud Gateway for routing and security
 - **Business Services**: Product, Order, Inventory, User, and Notification services
 - **Database**: MySQL for order and inventory, MongoDB for product, others as needed
 - **Communication**: REST APIs and event-driven patterns (Kafka)
-- **Security**: JWT-based authentication (configured but not fully implemented)
+- **Security**: JWT-based authentication
 - **Containerization**: Docker Compose for local orchestration
 
 ---
 
-## Project Structure (Updated)
+## Project Structure
 
 ```
 microservices/
@@ -40,7 +39,7 @@ microservices/
 │   ├── docker/mysql/init.sql
 │   ├── mysql/                 # MySQL data volume (ignored in git)
 │   └── src/main/resources/application.properties
-├── users-service/             # User management (port: see application.properties)
+├── users-service/             # User management (MySQL, port: 3326)
 │   └── src/main/resources/application.properties
 ├── notification-service/      # Email/SMS notifications (Kafka, ports: 9092, 29092)
 │   └── src/main/resources/application.properties
