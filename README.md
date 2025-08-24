@@ -4,7 +4,7 @@ A production-ready microservices-based e-commerce system built with Spring Boot,
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 This project implements a microservices architecture with the following key components:
 
@@ -18,7 +18,7 @@ This project implements a microservices architecture with the following key comp
 
 ---
 
-## 📁 Project Structure (Updated)
+## Project Structure (Updated)
 
 ```
 microservices/
@@ -26,23 +26,23 @@ microservices/
 │   ├── docker-compose.yaml
 │   ├── src/main/resources/application.properties
 │   └── volume-data/mysql_keycloak_data/   # Docker volume for Keycloak/MySQL
-├── product-service/           # Product catalog (MongoDB, port: see docker-compose.yml)
+├── product-service/           # Product catalog (MongoDB, port: 27017)
 │   ├── docker-compose.yml
 │   ├── data/                  # MongoDB data volume (ignored in git)
 │   └── src/main/resources/application.properties
-├── inventory-service/         # Stock management (MySQL, port: see docker-compose.yaml)
+├── inventory-service/         # Stock management (MySQL, port: 3316)
 │   ├── docker-compose.yaml
 │   ├── docker/mysql/data/     # MySQL data volume (ignored in git)
 │   ├── mysql/init.sql
 │   └── src/main/resources/application.properties
-├── order-service/             # Order processing (MySQL, port: 8082)
+├── order-service/             # Order processing (MySQL, port: 3306)
 │   ├── docker-compose.yaml
 │   ├── docker/mysql/init.sql
 │   ├── mysql/                 # MySQL data volume (ignored in git)
 │   └── src/main/resources/application.properties
 ├── users-service/             # User management (port: see application.properties)
 │   └── src/main/resources/application.properties
-├── notification-service/      # Email/SMS notifications (Kafka, port: 8087)
+├── notification-service/      # Email/SMS notifications (Kafka, ports: 9092, 29092)
 │   └── src/main/resources/application.properties
 ├── pom.xml                    # Parent POM
 └── README.md                  # This file
@@ -50,7 +50,7 @@ microservices/
 
 ---
 
-## 🔄 Recent Changes & Details
+## Recent Changes & Details
 
 ### API Gateway (`api-gateway`)
 - **Port:** 8080 (fixed)
@@ -93,15 +93,15 @@ microservices/
 
 ---
 
-## ⚙️ Updated Service Ports
+## Updated Service Ports
 
 | Service                  | Port    | Database         |
 | ------------------------ | ------- | --------------- |
 | **API Gateway**          | 8080    | -               |
-| **Product Service**      | see docker-compose | MongoDB           |
-| **Inventory Service**    | see docker-compose | MySQL             |
+| **Product Service**      | 8081    | MongoDB           |
+| **Inventory Service**    | 8083    | MySQL             |
 | **Order Service**        | 8082    | MySQL           |
-| **Users Service**        | see application.properties | -      |
+| **Users Service**        | 8084    | -      |
 | **Notification Service** | 8087    | -               |
 
 ---
@@ -116,7 +116,7 @@ microservices/
 
 ---
 
-## 🚀 Quick Start (Updated)
+## Quick Start
 
 1. **Start API Gateway:**  
    ```sh
@@ -159,7 +159,7 @@ microservices/
 
 ---
 
-## 🛠️ Troubleshooting (Updated)
+## Troubleshooting 
 
 - **Kafka Deserialization:** Ensure event classes exist in both producer and consumer with matching package names.
 - **Database Issues:** Confirm MySQL and MongoDB containers are running and data folders are not pushed to GitHub.
