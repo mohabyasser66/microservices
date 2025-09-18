@@ -1,12 +1,17 @@
 package com.user.service.users_service.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Getter
@@ -15,15 +20,21 @@ import java.util.HashSet;
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;
 
+    @NotBlank(message = "Role name is required")
+    @Size(max = 50, message = "Role name must not exceed 50 characters")
+    @Column(name = "name", length = 50, nullable = false, unique = true)
     private String name;
 
-    public Role(String name) {
-        this.name = name;
-    }
-
+    @JsonIgnore
     @ManyToMany(mappedBy = "roles")
     private Collection<User> users = new HashSet<>();
+
+    public Role(String name) {
+        this.id = UUID.randomUUID();
+        this.name = name != null ? name.toUpperCase() : null;
+    }
 }

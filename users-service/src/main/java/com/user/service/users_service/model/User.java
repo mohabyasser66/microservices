@@ -124,7 +124,6 @@ public class User {
         this.isEmailVerified = true;
     }
 
-    // Soft delete method
     public void deactivate() {
         this.isActive = false;
     }
