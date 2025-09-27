@@ -1,19 +1,19 @@
 package com.user.service.users_service.Controller;
 
-import com.user.service.users_service.dto.UserDto;
+import com.user.service.users_service.dto.*;
 import com.user.service.users_service.exceptions.AlreadyExistsException;
 import com.user.service.users_service.exceptions.ResourceNotFoundException;
 import com.user.service.users_service.model.User;
-import com.user.service.users_service.request.CreateUserRequest;
-import com.user.service.users_service.request.UpdateUserRequest;
-import com.user.service.users_service.response.ApiResponse;
 import com.user.service.users_service.service.IUserService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.lang.module.ResolutionException;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @RestController
@@ -23,43 +23,287 @@ public class UserController {
     private final IUserService userService;
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse> getUserById(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse> getUserById(@PathVariable UUID userId) {
         try {
             User user = userService.getUserById(userId);
             UserDto userDto = userService.convertUserToDto(user);
             return ResponseEntity.ok(new ApiResponse("Success", userDto));
-        } catch (ResolutionException e) {
+        } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) Boolean isActive) {
+        try {
+            Page<UserDto> users = userService.getAllUsers(page, size, sortBy, sortDir, isActive);
+            return ResponseEntity.ok(new ApiResponse("Success", users));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error retrieving users", null));
+        }
+    }
+
     @PostMapping("/add")
-    public ResponseEntity<ApiResponse> createUser(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<ApiResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         try {
             User user = userService.createUser(request);
             UserDto userDto = userService.convertUserToDto(user);
-            return ResponseEntity.ok(new ApiResponse("Create User Success", userDto));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse("User created successfully", userDto));
         } catch (AlreadyExistsException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse(e.getMessage(), null));
         }
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<ApiResponse> updateUser(@RequestBody UpdateUserRequest request, @PathVariable Long userId) {
+    public ResponseEntity<ApiResponse> updateUser(
+            @Valid @RequestBody UpdateUserRequest request,
+            @PathVariable UUID userId) {
         try {
             User user = userService.updateUser(request, userId);
             UserDto userDto = userService.convertUserToDto(user);
-            return ResponseEntity.ok(new ApiResponse("Updated Successfully", userDto));
+            return ResponseEntity.ok(new ApiResponse("User updated successfully", userDto));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse> deleteUser(@PathVariable UUID userId) {
         try {
             userService.deleteUser(userId);
-            return ResponseEntity.ok(new ApiResponse("Deleted Successfully", null));
+            return ResponseEntity.ok(new ApiResponse("User deleted successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+
+
+    // ============ ACCOUNT MANAGEMENT ============
+
+    @PatchMapping("/{userId}/activate")
+    public ResponseEntity<ApiResponse> activateUser(@PathVariable UUID userId) {
+        try {
+            userService.activateUser(userId);
+            return ResponseEntity.ok(new ApiResponse("User activated successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @PatchMapping("/{userId}/deactivate")
+    public ResponseEntity<ApiResponse> deactivateUser(@PathVariable UUID userId) {
+        try {
+            userService.deactivateUser(userId);
+            return ResponseEntity.ok(new ApiResponse("User deactivated successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @PatchMapping("/{userId}/change-password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @PathVariable UUID userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changePassword(userId, request);
+            return ResponseEntity.ok(new ApiResponse("Password changed successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    // ============ EMAIL VERIFICATION ============
+
+    @PostMapping("/{userId}/send-verification-email")
+    public ResponseEntity<ApiResponse> sendVerificationEmail(@PathVariable UUID userId) {
+        try {
+            userService.sendEmailVerification(userId);
+            return ResponseEntity.ok(new ApiResponse("Verification email sent successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse> verifyEmail(@RequestBody VerifyEmailRequest request) {
+        try {
+            userService.verifyEmail(request.getToken());
+            return ResponseEntity.ok(new ApiResponse("Email verified successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/{userId}/email-verification-status")
+    public ResponseEntity<ApiResponse> getEmailVerificationStatus(@PathVariable UUID userId) {
+        try {
+            boolean isVerified = userService.isEmailVerified(userId);
+            return ResponseEntity.ok(new ApiResponse("Email verification status retrieved", isVerified));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    // ============ ACCOUNT SECURITY ============
+
+    @PostMapping("/{userId}/reset-failed-attempts")
+    public ResponseEntity<ApiResponse> resetFailedLoginAttempts(@PathVariable UUID userId) {
+        try {
+            userService.resetFailedLoginAttempts(userId);
+            return ResponseEntity.ok(new ApiResponse("Failed login attempts reset successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    // ============ ROLE MANAGEMENT ============
+
+    @PostMapping("/{userId}/roles/{roleId}")
+    public ResponseEntity<ApiResponse> assignRoleToUser(
+            @PathVariable UUID userId,
+            @PathVariable UUID roleId) {
+        try {
+            userService.assignRoleToUser(userId, roleId);
+            return ResponseEntity.ok(new ApiResponse("Role assigned successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @DeleteMapping("/{userId}/roles/{roleId}")
+    public ResponseEntity<ApiResponse> removeRoleFromUser(
+            @PathVariable UUID userId,
+            @PathVariable UUID roleId) {
+        try {
+            userService.removeRoleFromUser(userId, roleId);
+            return ResponseEntity.ok(new ApiResponse("Role removed successfully", null));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/{userId}/roles")
+    public ResponseEntity<ApiResponse> getUserRoles(@PathVariable UUID userId) {
+        try {
+            var roles = userService.getUserRoles(userId);
+            return ResponseEntity.ok(new ApiResponse("User roles retrieved successfully", roles));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/{userId}/has-role/{roleName}")
+    public ResponseEntity<ApiResponse> checkUserHasRole(
+            @PathVariable UUID userId,
+            @PathVariable String roleName) {
+        try {
+            boolean hasRole = userService.userHasRole(userId, roleName);
+            return ResponseEntity.ok(new ApiResponse("Role check completed", hasRole));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    // ============ SEARCH AND FILTER ============
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse> searchUsers(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) String roleName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            Page<UserDto> users = userService.searchUsers(email, firstName, lastName, roleName, page, size);
+            return ResponseEntity.ok(new ApiResponse("Search completed successfully", users));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error performing search", null));
+        }
+    }
+
+    @GetMapping("/by-email/{email}")
+    public ResponseEntity<ApiResponse> getUserByEmail(@PathVariable String email) {
+        try {
+            User user = userService.getUserByEmail(email);
+            UserDto userDto = userService.convertUserToDto(user);
+            return ResponseEntity.ok(new ApiResponse("User found", userDto));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/by-role/{roleName}")
+    public ResponseEntity<ApiResponse> getUsersByRole(
+            @PathVariable String roleName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            Page<UserDto> users = userService.getUsersByRole(roleName, page, size);
+            return ResponseEntity.ok(new ApiResponse("Users retrieved successfully", users));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error retrieving users", null));
+        }
+    }
+
+    // ============ STATISTICS AND ANALYTICS ============
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse> getUserStatistics() {
+        try {
+            var stats = userService.getUserStatistics();
+            return ResponseEntity.ok(new ApiResponse("Statistics retrieved successfully", stats));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error retrieving statistics", null));
+        }
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<ApiResponse> getUserCount(
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) Boolean isEmailVerified) {
+        try {
+            long count = userService.getUserCount(isActive, isEmailVerified);
+            return ResponseEntity.ok(new ApiResponse("User count retrieved successfully", count));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error retrieving user count", null));
+        }
+    }
+
+    // ============ AUDIT AND HISTORY ============
+
+    @GetMapping("/{userId}/login-history")
+    public ResponseEntity<ApiResponse> getUserLoginHistory(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            var loginHistory = userService.getUserLoginHistory(userId, page, size);
+            return ResponseEntity.ok(new ApiResponse("Login history retrieved successfully", loginHistory));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/{userId}/record-login")
+    public ResponseEntity<ApiResponse> recordUserLogin(@PathVariable UUID userId) {
+        try {
+            userService.recordUserLogin(userId);
+            return ResponseEntity.ok(new ApiResponse("Login recorded successfully", null));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }

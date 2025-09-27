@@ -25,8 +25,8 @@ public class Role {
     private UUID id;
 
     @NotBlank(message = "Role name is required")
-    @Size(max = 50, message = "Role name must not exceed 50 characters")
-    @Column(name = "name", length = 50, nullable = false, unique = true)
+    @Size(max = 20, message = "Role name must not exceed 20 characters")
+    @Column(name = "name", length = 20, nullable = false, unique = true)
     private String name;
 
     @JsonIgnore
@@ -35,6 +35,6 @@ public class Role {
 
     public Role(String name) {
         this.id = UUID.randomUUID();
-        this.name = name != null ? name.toUpperCase() : null;
+        this.name = name.toUpperCase();
     }
 }

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # User Synchronization Service
+  user-sync-service:
+    build: .
+    container_name: user-sync-service
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_APP_JDBC_URL=jdbc:postgresql://postgres:5432/user-service
+      - SPRING_DATASOURCE_APP_USERNAME=postgres
+      - SPRING_DATASOURCE_APP_PASSWORD=password
+      - SPRING_DATASOURCE_KEYCLOAK_JDBC_URL=jdbc:postgresql://postgres:5432/keycloak
+      - SPRING_DATASOURCE_KEYCLOAK_USERNAME=keycloak
+      - SPRING_DATASOURCE_KEYCLOAK_PASSWORD=keycloak_password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - KEYCLOAK_ADMIN_SERVER_URL=http://keycloak:8080
+    depends_on:
+      - postgres
+      - discovery-server
+    networks:
+      - eshop-network
+    volumes:
+      - ./logs:/app/logs
+
+  # PostgreSQL Database (shared for both app and Keycloak)
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - eshop-network
+
+  # Keycloak
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.7
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak_password
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command:
+      - start-dev
+    depends_on:
+      - postgres
+    networks:
+      - eshop-network
+
+  # Discovery Server (Eureka)
+  discovery-server:
+    image: your-discovery-server:latest  # Replace with your discovery server image
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - eshop-network
+
+networks:
+  eshop-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

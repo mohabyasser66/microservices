@@ -1,4 +1,4 @@
-package com.user.service.users_service.response;
+package com.user.service.users_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
