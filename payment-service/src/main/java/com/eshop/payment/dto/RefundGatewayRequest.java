@@ -1,18 +1,12 @@
-package com.eshop.payment.gateway;
+package com.eshop.payment.dto;
 
 import java.math.BigDecimal;
 
-/**
- * Refund gateway request DTO
- */
 public class RefundGatewayRequest {
     
     private String originalTransactionId;
-    private String gatewayTransactionId;
     private BigDecimal refundAmount;
     private String reason;
-    private String currency = "USD";
-    private Long paymentId;
     private String gatewayName;
     
     // Constructors
@@ -33,14 +27,6 @@ public class RefundGatewayRequest {
         this.originalTransactionId = originalTransactionId;
     }
     
-    public String getGatewayTransactionId() {
-        return gatewayTransactionId;
-    }
-    
-    public void setGatewayTransactionId(String gatewayTransactionId) {
-        this.gatewayTransactionId = gatewayTransactionId;
-    }
-    
     public BigDecimal getRefundAmount() {
         return refundAmount;
     }
@@ -57,27 +43,21 @@ public class RefundGatewayRequest {
         this.reason = reason;
     }
     
-    public String getCurrency() {
-        return currency;
-    }
-    
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-    
-    public Long getPaymentId() {
-        return paymentId;
-    }
-    
-    public void setPaymentId(Long paymentId) {
-        this.paymentId = paymentId;
-    }
-    
     public String getGatewayName() {
         return gatewayName;
     }
     
     public void setGatewayName(String gatewayName) {
         this.gatewayName = gatewayName;
+    }
+    
+    @Override
+    public String toString() {
+        return "RefundGatewayRequest{" +
+                "originalTransactionId='" + originalTransactionId + '\'' +
+                ", refundAmount=" + refundAmount +
+                ", reason='" + reason + '\'' +
+                ", gatewayName='" + gatewayName + '\'' +
+                '}';
     }
 }

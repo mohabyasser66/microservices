@@ -13,27 +13,26 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-/**
- * Repository for Payment entity operations
- */
+
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Long> {
+public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     /**
      * Find payment by order ID
      */
-    Optional<Payment> findByOrderId(Long orderId);
+    Optional<Payment> findByOrderId(UUID orderId);
 
     /**
      * Find all payments by user ID
      */
-    List<Payment> findByUserId(Long userId);
+    List<Payment> findByUserId(UUID userId);
 
     /**
      * Find payments by user ID with pagination
      */
-    Page<Payment> findByUserId(Long userId, Pageable pageable);
+    Page<Payment> findByUserId(UUID userId, Pageable pageable);
 
     /**
      * Find payment by transaction ID
@@ -53,7 +52,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Find payments by user ID and status
      */
-    List<Payment> findByUserIdAndPaymentStatus(Long userId, PaymentStatus status);
+    List<Payment> findByUserIdAndPaymentStatus(UUID userId, PaymentStatus status);
 
     /**
      * Find payments within date range
@@ -75,19 +74,19 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.paymentStatus = 'SUCCESS' " +
            "AND (p.refundedAmount IS NULL OR p.refundedAmount < p.amount)")
-    List<Payment> findRefundablePaymentsByUserId(@Param("userId") Long userId);
+    List<Payment> findRefundablePaymentsByUserId(@Param("userId") UUID userId);
 
     /**
      * Calculate total payment amount by user
      */
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.userId = :userId AND p.paymentStatus = 'SUCCESS'")
-    BigDecimal calculateTotalPaymentsByUserId(@Param("userId") Long userId);
+    BigDecimal calculateTotalPaymentsByUserId(@Param("userId") UUID userId);
 
     /**
      * Calculate total refunded amount by user
      */
     @Query("SELECT SUM(p.refundedAmount) FROM Payment p WHERE p.userId = :userId AND p.refundedAmount > 0")
-    BigDecimal calculateTotalRefundsByUserId(@Param("userId") Long userId);
+    BigDecimal calculateTotalRefundsByUserId(@Param("userId") UUID userId);
 
     /**
      * Find failed payments for retry
@@ -109,7 +108,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Count payments by user and status
      */
-    long countByUserIdAndPaymentStatus(Long userId, PaymentStatus status);
+    long countByUserIdAndPaymentStatus(UUID userId, PaymentStatus status);
 
     /**
      * Find payments with amounts greater than specified value
@@ -121,15 +120,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Find recent payments by user
      */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId ORDER BY p.createdAt DESC")
-    List<Payment> findRecentPaymentsByUserId(@Param("userId") Long userId, Pageable pageable);
+    List<Payment> findRecentPaymentsByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     /**
      * Check if payment exists by order ID and status
      */
-    boolean existsByOrderIdAndPaymentStatus(Long orderId, PaymentStatus status);
+    boolean existsByOrderIdAndPaymentStatus(UUID orderId, PaymentStatus status);
 
     /**
      * Find payments by multiple order IDs
      */
-    List<Payment> findByOrderIdIn(List<Long> orderIds);
+    List<Payment> findByOrderIdIn(List<UUID> orderIds);
 }

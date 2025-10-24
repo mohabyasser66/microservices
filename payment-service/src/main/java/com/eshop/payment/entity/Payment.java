@@ -11,25 +11,23 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-/**
- * Payment entity representing payment transactions
- */
 @Entity
 @Table(name = "payments")
 public class Payment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @NotNull(message = "Order ID cannot be null")
     @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    private UUID orderId;
 
     @NotNull(message = "User ID cannot be null")
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private UUID userId;
 
     @NotNull(message = "Amount cannot be null")
     @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
@@ -59,6 +57,10 @@ public class Payment {
     @Column(name = "refunded_amount", precision = 10, scale = 2)
     private BigDecimal refundedAmount = BigDecimal.ZERO;
 
+    @Size(max = 255, message = "Refund transaction ID must not exceed 255 characters")
+    @Column(name = "refund_transaction_id")
+    private String refundTransactionId;
+
     @Size(max = 1000, message = "Failure reason must not exceed 1000 characters")
     @Column(name = "failure_reason")
     private String failureReason;
@@ -77,7 +79,7 @@ public class Payment {
     // Constructors
     public Payment() {}
 
-    public Payment(Long orderId, Long userId, BigDecimal amount, PaymentMethod paymentMethod) {
+    public Payment(UUID orderId, UUID userId, BigDecimal amount, PaymentMethod paymentMethod) {
         this.orderId = orderId;
         this.userId = userId;
         this.amount = amount;
@@ -85,27 +87,27 @@ public class Payment {
     }
 
     // Getters and Setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Long getOrderId() {
+    public UUID getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(Long orderId) {
+    public void setOrderId(UUID orderId) {
         this.orderId = orderId;
     }
 
-    public Long getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 
@@ -163,6 +165,14 @@ public class Payment {
 
     public void setRefundedAmount(BigDecimal refundedAmount) {
         this.refundedAmount = refundedAmount;
+    }
+
+    public String getRefundTransactionId() {
+        return refundTransactionId;
+    }
+
+    public void setRefundTransactionId(String refundTransactionId) {
+        this.refundTransactionId = refundTransactionId;
     }
 
     public String getFailureReason() {
