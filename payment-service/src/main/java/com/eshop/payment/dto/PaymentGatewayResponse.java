@@ -2,7 +2,6 @@ package com.eshop.payment.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 public class PaymentGatewayResponse {
     
