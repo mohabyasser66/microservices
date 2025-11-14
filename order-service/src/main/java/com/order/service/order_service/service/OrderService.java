@@ -6,6 +6,7 @@ import com.order.service.order_service.dto.OrderUpdateRequest;
 import com.order.service.order_service.dto.OrderItemRequest;
 import com.order.service.order_service.dto.ShippingAddressRequest;
 import com.order.service.order_service.dto.BillingAddressRequest;
+import com.order.service.order_service.dto.OrderPlacedEvent;
 import com.order.service.order_service.model.Order;
 import com.order.service.order_service.model.OrderItem;
 import com.order.service.order_service.enums.OrderStatus;
@@ -13,7 +14,6 @@ import com.order.service.order_service.enums.PaymentStatus;
 import com.order.service.order_service.model.ShippingAddress;
 import com.order.service.order_service.model.BillingAddress;
 import com.order.service.order_service.repository.OrderRepository;
-import com.techie.microservices.order.event.OrderPlacedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -545,9 +545,9 @@ public class OrderService implements IOrderService {
     private void publishOrderPlacedEvent(Order order, OrderRequest orderRequest) {
         OrderPlacedEvent orderPlacedEvent = new OrderPlacedEvent();
         orderPlacedEvent.setOrderNumber(order.getOrderNumber());
-        orderPlacedEvent.setEmail(order.getShippingAddress().getEmail()); // From embedded address
-        orderPlacedEvent.setFirstName(order.getShippingAddress().getFirstName()); // From embedded address
-        orderPlacedEvent.setLastName(order.getShippingAddress().getLastName()); // From embedded address
+        orderPlacedEvent.setEmail(order.getShippingAddress().getEmail());
+        orderPlacedEvent.setFirstName(order.getShippingAddress().getFirstName());
+        orderPlacedEvent.setLastName(order.getShippingAddress().getLastName()); 
 
         log.info("Publishing order placed event to Kafka for order number: {}", order.getOrderNumber());
         kafkaTemplate.send("order-placed", orderPlacedEvent);

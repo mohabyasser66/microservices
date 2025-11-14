@@ -84,8 +84,6 @@ public class UserController {
         }
     }
 
-
-
     // ============ ACCOUNT MANAGEMENT ============
 
     @PatchMapping("/{userId}/activate")
@@ -202,36 +200,7 @@ public class UserController {
         }
     }
 
-    @GetMapping("/{userId}/has-role/{roleName}")
-    public ResponseEntity<ApiResponse> checkUserHasRole(
-            @PathVariable UUID userId,
-            @PathVariable String roleName) {
-        try {
-            boolean hasRole = userService.userHasRole(userId, roleName);
-            return ResponseEntity.ok(new ApiResponse("Role check completed", hasRole));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
-        }
-    }
-
     // ============ SEARCH AND FILTER ============
-
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse> searchUsers(
-            @RequestParam(required = false) String email,
-            @RequestParam(required = false) String firstName,
-            @RequestParam(required = false) String lastName,
-            @RequestParam(required = false) String roleName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        try {
-            Page<UserDto> users = userService.searchUsers(email, firstName, lastName, roleName, page, size);
-            return ResponseEntity.ok(new ApiResponse("Search completed successfully", users));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error performing search", null));
-        }
-    }
 
     @GetMapping("/by-email/{email}")
     public ResponseEntity<ApiResponse> getUserByEmail(@PathVariable String email) {
@@ -258,54 +227,50 @@ public class UserController {
         }
     }
 
-    // ============ STATISTICS AND ANALYTICS ============
+    // ============ EMAIL VERIFICATION ============
 
-    @GetMapping("/stats")
-    public ResponseEntity<ApiResponse> getUserStatistics() {
+    @PostMapping("/{userId}/send-verification")
+    public ResponseEntity<ApiResponse> sendEmailVerification(@PathVariable UUID userId) {
         try {
-            var stats = userService.getUserStatistics();
-            return ResponseEntity.ok(new ApiResponse("Statistics retrieved successfully", stats));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving statistics", null));
-        }
-    }
-
-    @GetMapping("/count")
-    public ResponseEntity<ApiResponse> getUserCount(
-            @RequestParam(required = false) Boolean isActive,
-            @RequestParam(required = false) Boolean isEmailVerified) {
-        try {
-            long count = userService.getUserCount(isActive, isEmailVerified);
-            return ResponseEntity.ok(new ApiResponse("User count retrieved successfully", count));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("Error retrieving user count", null));
-        }
-    }
-
-    // ============ AUDIT AND HISTORY ============
-
-    @GetMapping("/{userId}/login-history")
-    public ResponseEntity<ApiResponse> getUserLoginHistory(
-            @PathVariable UUID userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        try {
-            var loginHistory = userService.getUserLoginHistory(userId, page, size);
-            return ResponseEntity.ok(new ApiResponse("Login history retrieved successfully", loginHistory));
+            userService.sendEmailVerification(userId);
+            return ResponseEntity.ok(new ApiResponse("Verification email sent successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }
     }
 
-    @PostMapping("/{userId}/record-login")
-    public ResponseEntity<ApiResponse> recordUserLogin(@PathVariable UUID userId) {
+    @PostMapping("/{userId}/resend-verification")
+    public ResponseEntity<ApiResponse> resendEmailVerification(@PathVariable UUID userId) {
         try {
-            userService.recordUserLogin(userId);
-            return ResponseEntity.ok(new ApiResponse("Login recorded successfully", null));
+            userService.resendEmailVerification(userId);
+            return ResponseEntity.ok(new ApiResponse("Verification email resent successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse> verifyEmail(@RequestParam String token) {
+        try {
+            userService.verifyEmail(token);
+            return ResponseEntity.ok(new ApiResponse("Email verified successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/verify-token/{token}")
+    public ResponseEntity<ApiResponse> isVerificationTokenValid(@PathVariable String token) {
+        try {
+            boolean isValid = userService.isVerificationTokenValid(token);
+            return ResponseEntity.ok(new ApiResponse("Token validation completed", isValid));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error validating token", false));
         }
     }
 

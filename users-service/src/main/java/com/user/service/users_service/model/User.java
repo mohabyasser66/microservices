@@ -79,6 +79,12 @@ public class User {
     @Column(name = "account_locked_until")
     private LocalDateTime accountLockedUntil;
 
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+
+    @Column(name = "email_verification_token_expires_at")
+    private LocalDateTime emailVerificationTokenExpiresAt;
+
     @ManyToMany(fetch = FetchType.EAGER, cascade =
             {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
@@ -135,6 +141,22 @@ public class User {
     public boolean hasRole(String roleName) {
         return roles.stream()
                 .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+    }
+
+    public boolean isEmailVerificationTokenValid() {
+        return emailVerificationToken != null && 
+               emailVerificationTokenExpiresAt != null &&
+               LocalDateTime.now().isBefore(emailVerificationTokenExpiresAt);
+    }
+    
+    public void generateEmailVerificationToken() {
+        this.emailVerificationToken = UUID.randomUUID().toString();
+        this.emailVerificationTokenExpiresAt = LocalDateTime.now().plusHours(24); // 24 hour expiry
+    }
+    
+    public void clearEmailVerificationToken() {
+        this.emailVerificationToken = null;
+        this.emailVerificationTokenExpiresAt = null;
     }
 
     @Override

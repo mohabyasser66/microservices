@@ -26,16 +26,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - no authentication required
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**")
                         .permitAll()
-
                         // Allow all API endpoints for simplicity since authentication is handled by
                         // Keycloak
                         .requestMatchers("/api/**").permitAll()
-
-                        // All other endpoints require authentication
                         .anyRequest().authenticated());
 
         return http.build();

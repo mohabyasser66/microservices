@@ -124,24 +124,6 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("Should search users successfully - working solution")
-    void shouldSearchUsersSuccessfully() throws Exception {
-        // Create proper empty page that can be serialized
-        List<UserDto> emptyList = new ArrayList<>();
-        Page<UserDto> workingPage = new PageImpl<>(emptyList);
-        when(userService.searchUsers("john", null, null, null, 0, 10)).thenReturn(workingPage);
-
-        mockMvc.perform(get("/api/users/search")
-                .param("email", "john")
-                .param("page", "0")
-                .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Search completed successfully"));
-
-        verify(userService).searchUsers("john", null, null, null, 0, 10);
-    }
-
-    @Test
     @DisplayName("Should get users by role successfully - working solution")
     void shouldGetUsersByRoleSuccessfully() throws Exception {
         // Create proper empty page that can be serialized
@@ -156,23 +138,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Users retrieved successfully"));
 
         verify(userService).getUsersByRole("USER", 0, 10);
-    }
-
-    @Test
-    @DisplayName("Should get user login history successfully - working solution")
-    void shouldGetUserLoginHistorySuccessfully() throws Exception {
-        // Create proper empty page that can be serialized
-        List<LoginHistoryDto> emptyList = new ArrayList<>();
-        Page<LoginHistoryDto> workingPage = new PageImpl<>(emptyList);
-        when(userService.getUserLoginHistory(testUserId, 0, 10)).thenReturn(workingPage);
-
-        mockMvc.perform(get("/api/users/{userId}/login-history", testUserId)
-                .param("page", "0")
-                .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Login history retrieved successfully"));
-
-        verify(userService).getUserLoginHistory(testUserId, 0, 10);
     }
 
     @Test
@@ -230,6 +195,4 @@ class UserControllerTest {
 
         verify(userService).createUser(any(CreateUserRequest.class));
     }
-
-    // Add more simplified tests as needed...
 }

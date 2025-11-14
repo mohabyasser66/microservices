@@ -44,3 +44,6 @@ data/
 PROJECT_SETUP_SUMMARY.md
 JWT_USER_EXTRACTION_GUIDE.md
 KEYCLOAK_MIGRATION_GUIDE.md
+
+src/main/resources/application.properties
+application.properties

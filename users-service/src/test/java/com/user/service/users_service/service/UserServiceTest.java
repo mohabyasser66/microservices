@@ -1,12 +1,15 @@
 package com.user.service.users_service.service;
 
 import com.user.service.users_service.dto.*;
+import com.user.service.users_service.event.EmailVerificationRequestEvent;
+import com.user.service.users_service.event.NotificationEventPublisher;
 import com.user.service.users_service.exceptions.AlreadyExistsException;
 import com.user.service.users_service.exceptions.ResourceNotFoundException;
 import com.user.service.users_service.model.Role;
 import com.user.service.users_service.model.User;
 import com.user.service.users_service.repository.RoleRepository;
 import com.user.service.users_service.repository.UserRepository;
+import com.user.service.users_service.util.JwtUserExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,21 +48,30 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private EmailService emailService;
+    private JwtUserExtractor jwtExtractor;
+
+    @Mock
+    private NotificationEventPublisher eventPublisher;
 
     @InjectMocks
     private UserService userService;
 
     private User testUser;
+    private User adminUser;
     private UserDto testUserDto;
     private Role testRole;
+    private Role adminRole;
     private UUID testUserId;
+    private UUID adminUserId;
     private UUID testRoleId;
+    private UUID adminRoleId;
 
     @BeforeEach
     void setUp() {
         testUserId = UUID.randomUUID();
+        adminUserId = UUID.randomUUID();
         testRoleId = UUID.randomUUID();
+        adminRoleId = UUID.randomUUID();
 
         testUser = new User();
         testUser.setId(testUserId);
@@ -73,6 +85,19 @@ class UserServiceTest {
         testUser.setCreatedAt(LocalDateTime.now());
         testUser.setUpdatedAt(LocalDateTime.now());
 
+        // Setup admin user
+        adminUser = new User();
+        adminUser.setId(adminUserId);
+        adminUser.setFirstName("Admin");
+        adminUser.setLastName("User");
+        adminUser.setEmail("admin@example.com");
+        adminUser.setPassword("encodedPassword");
+        adminUser.setIsActive(true);
+        adminUser.setIsEmailVerified(true);
+        adminUser.setFailedLoginAttempts(0);
+        adminUser.setCreatedAt(LocalDateTime.now());
+        adminUser.setUpdatedAt(LocalDateTime.now());
+
         testUserDto = new UserDto();
         testUserDto.setFirstName("John");
         testUserDto.setLastName("Doe");
@@ -81,6 +106,13 @@ class UserServiceTest {
         testRole = new Role();
         testRole.setId(testRoleId);
         testRole.setName("USER");
+
+        adminRole = new Role();
+        adminRole.setId(adminRoleId);
+        adminRole.setName("ADMIN");
+
+        // Set up admin user with admin role
+        adminUser.getRoles().add(adminRole);
     }
 
     // ============ BASIC CRUD TESTS ============
@@ -123,7 +155,7 @@ class UserServiceTest {
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        doNothing().when(emailService).sendVerificationEmail(any(UUID.class), anyString());
+        doNothing().when(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
 
         User result = userService.createUser(request);
 
@@ -136,7 +168,7 @@ class UserServiceTest {
         verify(userRepository).existsByEmail(request.getEmail());
         verify(passwordEncoder).encode(request.getPassword());
         verify(userRepository).save(any(User.class));
-        verify(emailService).sendVerificationEmail(any(UUID.class), eq("john.doe@example.com"));
+        verify(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
     }
 
     @Test
@@ -164,10 +196,12 @@ class UserServiceTest {
         request.setLastName("Smith");
         request.setEmail("jane.smith@example.com");
 
+        // Mock current user for security check
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(testUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(userRepository.existsByEmail("jane.smith@example.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        doNothing().when(emailService).sendVerificationEmail(any(UUID.class), anyString());
+        doNothing().when(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
 
         User result = userService.updateUser(request, testUserId);
 
@@ -175,12 +209,13 @@ class UserServiceTest {
         verify(userRepository).findById(testUserId);
         verify(userRepository).existsByEmail("jane.smith@example.com");
         verify(userRepository).save(any(User.class));
-        verify(emailService).sendVerificationEmail(testUserId, "jane.smith@example.com");
+        verify(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
     }
 
     @Test
     @DisplayName("Should delete user (soft delete)")
     void shouldDeleteUserSoftDelete() {
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -196,6 +231,7 @@ class UserServiceTest {
         List<User> users = Arrays.asList(testUser);
         Page<User> userPage = new PageImpl<>(users);
 
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
         when(modelMapper.map(testUser, UserDto.class)).thenReturn(testUserDto);
 
@@ -242,15 +278,16 @@ class UserServiceTest {
         request.setCurrentPassword("oldPassword");
         request.setNewPassword("newPassword123");
 
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(testUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(passwordEncoder.matches("oldPassword", testUser.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches("oldPassword", "encodedPassword")).thenReturn(true);
         when(passwordEncoder.encode("newPassword123")).thenReturn("newEncodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
         userService.changePassword(testUserId, request);
 
         verify(userRepository).findById(testUserId);
-        verify(passwordEncoder).matches("oldPassword", testUser.getPassword());
+        verify(passwordEncoder).matches("oldPassword", "encodedPassword");
         verify(passwordEncoder).encode("newPassword123");
         verify(userRepository).save(any(User.class));
     }
@@ -262,6 +299,7 @@ class UserServiceTest {
         request.setCurrentPassword("wrongPassword");
         request.setNewPassword("newPassword123");
 
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(testUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongPassword", testUser.getPassword())).thenReturn(false);
 
@@ -281,44 +319,101 @@ class UserServiceTest {
     @DisplayName("Should send email verification successfully")
     void shouldSendEmailVerificationSuccessfully() {
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        doNothing().when(emailService).sendVerificationEmail(testUserId, testUser.getEmail());
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+        doNothing().when(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
 
         userService.sendEmailVerification(testUserId);
 
         verify(userRepository).findById(testUserId);
-        verify(emailService).sendVerificationEmail(testUserId, testUser.getEmail());
+        verify(userRepository).save(any(User.class));
+        verify(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
+    }
+
+    @Test
+    @DisplayName("Should resend email verification successfully")
+    void shouldResendEmailVerificationSuccessfully() {
+        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+        doNothing().when(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
+
+        userService.resendEmailVerification(testUserId);
+
+        verify(userRepository).findById(testUserId);
+        verify(userRepository).save(any(User.class));
+        verify(eventPublisher).publishEmailVerificationRequest(any(EmailVerificationRequestEvent.class));
     }
 
     @Test
     @DisplayName("Should verify email successfully")
     void shouldVerifyEmailSuccessfully() {
         String token = "valid-token";
-        when(emailService.getUserIdFromToken(token)).thenReturn(testUserId);
-        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+        testUser.setEmailVerificationToken(token);
+        testUser.setEmailVerificationTokenExpiresAt(LocalDateTime.now().plusHours(1)); // Valid token
+
+        when(userRepository.findByEmailVerificationToken(token)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
-        doNothing().when(emailService).removeToken(token);
 
         userService.verifyEmail(token);
 
-        verify(emailService).getUserIdFromToken(token);
-        verify(userRepository).findById(testUserId);
+        assertTrue(testUser.getIsEmailVerified());
+        assertNull(testUser.getEmailVerificationToken());
+        assertNull(testUser.getEmailVerificationTokenExpiresAt());
+        verify(userRepository).findByEmailVerificationToken(token);
         verify(userRepository).save(any(User.class));
-        verify(emailService).removeToken(token);
     }
 
     @Test
     @DisplayName("Should throw IllegalArgumentException for invalid verification token")
     void shouldThrowIllegalArgumentExceptionForInvalidToken() {
         String token = "invalid-token";
-        when(emailService.getUserIdFromToken(token)).thenReturn(null);
+        when(userRepository.findByEmailVerificationToken(token)).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> userService.verifyEmail(token));
 
-        assertEquals("Invalid or expired verification token", exception.getMessage());
-        verify(emailService).getUserIdFromToken(token);
-        verify(userRepository, never()).findById(any(UUID.class));
+        assertEquals("Invalid verification token", exception.getMessage());
+        verify(userRepository).findByEmailVerificationToken(token);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException for expired verification token")
+    void shouldThrowIllegalArgumentExceptionForExpiredToken() {
+        String token = "expired-token";
+        testUser.setEmailVerificationToken(token);
+        testUser.setEmailVerificationTokenExpiresAt(LocalDateTime.now().minusHours(1)); // Expired token
+
+        when(userRepository.findByEmailVerificationToken(token)).thenReturn(Optional.of(testUser));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.verifyEmail(token));
+
+        assertEquals("Verification token has expired", exception.getMessage());
+        verify(userRepository).findByEmailVerificationToken(token);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Should check verification token validity")
+    void shouldCheckVerificationTokenValidity() {
+        String validToken = "valid-token";
+        String invalidToken = "invalid-token";
+
+        testUser.setEmailVerificationToken(validToken);
+        testUser.setEmailVerificationTokenExpiresAt(LocalDateTime.now().plusHours(1)); // Valid token
+
+        when(userRepository.findByEmailVerificationToken(validToken)).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailVerificationToken(invalidToken)).thenReturn(Optional.empty());
+
+        boolean validResult = userService.isVerificationTokenValid(validToken);
+        boolean invalidResult = userService.isVerificationTokenValid(invalidToken);
+
+        assertTrue(validResult);
+        assertFalse(invalidResult);
+        verify(userRepository).findByEmailVerificationToken(validToken);
+        verify(userRepository).findByEmailVerificationToken(invalidToken);
     }
 
     @Test
@@ -337,6 +432,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Should reset failed login attempts successfully")
     void shouldResetFailedLoginAttemptsSuccessfully() {
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -365,6 +461,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Should assign role to user successfully")
     void shouldAssignRoleToUserSuccessfully() {
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(roleRepository.findById(testRoleId)).thenReturn(Optional.of(testRole));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
@@ -380,6 +477,7 @@ class UserServiceTest {
     @DisplayName("Should remove role from user successfully")
     void shouldRemoveRoleFromUserSuccessfully() {
         testUser.getRoles().add(testRole);
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
         when(roleRepository.findById(testRoleId)).thenReturn(Optional.of(testRole));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
@@ -395,6 +493,7 @@ class UserServiceTest {
     @DisplayName("Should get user roles successfully")
     void shouldGetUserRolesSuccessfully() {
         testUser.getRoles().add(testRole);
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
 
         Collection<Role> result = userService.getUserRoles(testUserId);
@@ -405,39 +504,7 @@ class UserServiceTest {
         verify(userRepository).findById(testUserId);
     }
 
-    @Test
-    @DisplayName("Should check if user has role")
-    void shouldCheckIfUserHasRole() {
-        testUser.getRoles().add(testRole);
-        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-
-        boolean result = userService.userHasRole(testUserId, "USER");
-
-        assertTrue(result);
-        verify(userRepository).findById(testUserId);
-    }
-
     // ============ SEARCH AND FILTER TESTS ============
-
-    @Test
-    @DisplayName("Should search users successfully")
-    void shouldSearchUsersSuccessfully() {
-        List<User> users = Arrays.asList(testUser);
-        Page<User> userPage = new PageImpl<>(users);
-        Pageable pageable = PageRequest.of(0, 10);
-
-        when(userRepository.searchUsers("john", null, null, pageable)).thenReturn(userPage);
-        when(modelMapper.map(testUser, UserDto.class)).thenReturn(testUserDto);
-
-        Page<UserDto> result = userService.searchUsers("john", null, null, null, 0, 10);
-
-        assertNotNull(result);
-        assertEquals(1, result.getContent().size());
-        assertEquals("John", result.getContent().get(0).getFirstName());
-
-        verify(userRepository).searchUsers("john", null, null, pageable);
-        verify(modelMapper).map(testUser, UserDto.class);
-    }
 
     @Test
     @DisplayName("Should get user by email successfully")
@@ -458,6 +525,7 @@ class UserServiceTest {
         Page<User> userPage = new PageImpl<>(users);
         Pageable pageable = PageRequest.of(0, 10);
 
+        when(jwtExtractor.getCurrentUserFromJwt()).thenReturn(Optional.of(adminUser));
         when(userRepository.findActiveUsersByRole("USER", pageable)).thenReturn(userPage);
         when(modelMapper.map(testUser, UserDto.class)).thenReturn(testUserDto);
 
@@ -469,74 +537,5 @@ class UserServiceTest {
 
         verify(userRepository).findActiveUsersByRole("USER", pageable);
         verify(modelMapper).map(testUser, UserDto.class);
-    }
-
-    // ============ STATISTICS TESTS ============
-
-    @Test
-    @DisplayName("Should get user statistics successfully")
-    void shouldGetUserStatisticsSuccessfully() {
-        when(userRepository.count()).thenReturn(100L);
-        when(userRepository.countByIsActive(true)).thenReturn(90L);
-        when(userRepository.countByIsActive(false)).thenReturn(10L);
-        when(userRepository.countByIsEmailVerified(true)).thenReturn(80L);
-        when(userRepository.countByIsEmailVerified(false)).thenReturn(20L);
-        when(userRepository.countLockedUsers(any(LocalDateTime.class))).thenReturn(5L);
-        when(userRepository.countUsersCreatedAfter(any(LocalDateTime.class))).thenReturn(10L, 50L, 80L);
-
-        UserStatisticsDto result = userService.getUserStatistics();
-
-        assertNotNull(result);
-        assertEquals(100L, result.getTotalUsers());
-        assertEquals(90L, result.getActiveUsers());
-        assertEquals(10L, result.getInactiveUsers());
-        assertEquals(80L, result.getVerifiedUsers());
-        assertEquals(20L, result.getUnverifiedUsers());
-        assertEquals(5L, result.getLockedUsers());
-
-        verify(userRepository).count();
-        verify(userRepository).countByIsActive(true);
-        verify(userRepository).countByIsActive(false);
-        verify(userRepository).countByIsEmailVerified(true);
-        verify(userRepository).countByIsEmailVerified(false);
-        verify(userRepository).countLockedUsers(any(LocalDateTime.class));
-        verify(userRepository, times(3)).countUsersCreatedAfter(any(LocalDateTime.class));
-    }
-
-    @Test
-    @DisplayName("Should get user count successfully")
-    void shouldGetUserCountSuccessfully() {
-        when(userRepository.countByIsActiveAndIsEmailVerified(true, true)).thenReturn(75L);
-
-        long result = userService.getUserCount(true, true);
-
-        assertEquals(75L, result);
-        verify(userRepository).countByIsActiveAndIsEmailVerified(true, true);
-    }
-
-    // ============ AUDIT TESTS ============
-
-    @Test
-    @DisplayName("Should record user login successfully")
-    void shouldRecordUserLoginSuccessfully() {
-        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-
-        userService.recordUserLogin(testUserId);
-
-        verify(userRepository).findById(testUserId);
-        verify(userRepository).save(any(User.class));
-    }
-
-    @Test
-    @DisplayName("Should get user login history successfully")
-    void shouldGetUserLoginHistorySuccessfully() {
-        when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-
-        Page<LoginHistoryDto> result = userService.getUserLoginHistory(testUserId, 0, 10);
-
-        assertNotNull(result);
-        assertTrue(result.isEmpty()); // Current implementation returns empty page
-        verify(userRepository).findById(testUserId);
     }
 }

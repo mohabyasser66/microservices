@@ -37,6 +37,10 @@ public interface IUserService {
 
     boolean isEmailVerified(UUID userId);
 
+    void resendEmailVerification(UUID userId);
+
+    boolean isVerificationTokenValid(String token);
+
     // ============ ACCOUNT SECURITY ============
 
     void resetFailedLoginAttempts(UUID userId);
@@ -50,22 +54,9 @@ public interface IUserService {
 
     Collection<Role> getUserRoles(UUID userId);
 
-    boolean userHasRole(UUID userId, String roleName);
-
     // ============ SEARCH AND FILTER ============
-    Page<UserDto> searchUsers(String email, String firstName, String lastName, String roleName, int page, int size);
-
     User getUserByEmail(String email);
 
     Page<UserDto> getUsersByRole(String roleName, int page, int size);
 
-    // ============ STATISTICS AND ANALYTICS ============
-    UserStatisticsDto getUserStatistics();
-
-    long getUserCount(Boolean isActive, Boolean isEmailVerified);
-
-    // ============ AUDIT AND HISTORY ============
-    Page<LoginHistoryDto> getUserLoginHistory(UUID userId, int page, int size);
-
-    void recordUserLogin(UUID userId);
 }

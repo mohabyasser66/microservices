@@ -1,6 +1,8 @@
 package com.user.service.users_service.service;
 
 import com.user.service.users_service.dto.*;
+import com.user.service.users_service.event.EmailVerificationRequestEvent;
+import com.user.service.users_service.event.NotificationEventPublisher;
 import com.user.service.users_service.exceptions.AlreadyExistsException;
 import com.user.service.users_service.exceptions.ResourceNotFoundException;
 import com.user.service.users_service.model.Role;
@@ -35,8 +37,8 @@ public class UserService implements IUserService {
     private final RoleRepository roleRepository;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
     private final JwtUserExtractor jwtExtractor;
+    private final NotificationEventPublisher eventPublisher;
 
     // BASIC CRUD OPERATIONS
 
@@ -63,9 +65,23 @@ public class UserService implements IUserService {
                     user.setIsEmailVerified(false);
                     user.setFailedLoginAttempts(0);
 
+                    user.generateEmailVerificationToken();
+
                     User savedUser = userRepository.save(user);
+
+                    EmailVerificationRequestEvent event = EmailVerificationRequestEvent.builder()
+                            .userId(savedUser.getId())
+                            .email(savedUser.getEmail())
+                            .firstName(savedUser.getFirstName())
+                            .lastName(savedUser.getLastName())
+                            .verificationToken(savedUser.getEmailVerificationToken())
+                            .verificationUrl(
+                                    "http://localhost:3000/verify-email?token=" + savedUser.getEmailVerificationToken())
+                            .build();
+
+                    eventPublisher.publishEmailVerificationRequest(event);
+
                     log.info("User created successfully with ID: {}", savedUser.getId());
-                    emailService.sendVerificationEmail(savedUser.getId(), savedUser.getEmail());
                     return savedUser;
                 }).orElseThrow(() -> new AlreadyExistsException(request.getEmail() + " already exists"));
     }
@@ -88,8 +104,21 @@ public class UserService implements IUserService {
                     throw new AlreadyExistsException("Email " + request.getEmail() + " already exists");
                 }
                 existingUser.setEmail(request.getEmail());
-                existingUser.setIsEmailVerified(false); // Reset verification status
-                emailService.sendVerificationEmail(existingUser.getId(), existingUser.getEmail());
+                existingUser.setIsEmailVerified(false);
+
+                existingUser.generateEmailVerificationToken();
+
+                EmailVerificationRequestEvent event = EmailVerificationRequestEvent.builder()
+                        .userId(existingUser.getId())
+                        .email(existingUser.getEmail())
+                        .firstName(existingUser.getFirstName())
+                        .lastName(existingUser.getLastName())
+                        .verificationToken(existingUser.getEmailVerificationToken())
+                        .verificationUrl(
+                                "http://localhost:3000/verify-email?token=" + existingUser.getEmailVerificationToken())
+                        .build();
+
+                eventPublisher.publishEmailVerificationRequest(event);
             }
 
             User updatedUser = userRepository.save(existingUser);
@@ -161,7 +190,8 @@ public class UserService implements IUserService {
 
     @Override
     public void changePassword(UUID userId, ChangePasswordRequest request) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.getId().equals(userId) && !currentUser.hasRole("ADMIN")) {
             throw new SecurityException("You can only change your own password");
         }
@@ -178,23 +208,19 @@ public class UserService implements IUserService {
     // EMAIL VERIFICATION
 
     @Override
-    public void sendEmailVerification(UUID userId) {
-        User user = getUserById(userId);
-        emailService.sendVerificationEmail(userId, user.getEmail());
-        log.info("Verification email sent for user ID: {}", userId);
-    }
-
-    @Override
     public void verifyEmail(String token) {
-        UUID userId = emailService.getUserIdFromToken(token);
-        if (userId == null) {
-            throw new IllegalArgumentException("Invalid or expired verification token");
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid verification token"));
+
+        if (!user.isEmailVerificationTokenValid()) {
+            throw new IllegalArgumentException("Verification token has expired");
         }
-        User user = getUserById(userId);
+
         user.setIsEmailVerified(true);
+        user.clearEmailVerificationToken();
         userRepository.save(user);
-        emailService.removeToken(token);
-        log.info("Email verified for user ID: {}", userId);
+
+        log.info("Email verified for user ID: {}", user.getId());
     }
 
     @Override
@@ -208,7 +234,8 @@ public class UserService implements IUserService {
 
     @Override
     public void resetFailedLoginAttempts(UUID userId) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.hasRole("ADMIN")) {
             throw new SecurityException("Only admins can reset failed login attempts");
         }
@@ -234,7 +261,8 @@ public class UserService implements IUserService {
 
     @Override
     public void assignRoleToUser(UUID userId, UUID roleId) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.hasRole("ADMIN")) {
             throw new SecurityException("Only admins can assign roles to users");
         }
@@ -249,7 +277,8 @@ public class UserService implements IUserService {
 
     @Override
     public void removeRoleFromUser(UUID userId, UUID roleId) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.hasRole("ADMIN")) {
             throw new SecurityException("Only admins can remove roles from users");
         }
@@ -265,7 +294,8 @@ public class UserService implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public Collection<Role> getUserRoles(UUID userId) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.hasRole("ADMIN")) {
             throw new SecurityException("Admin can only view roles");
         }
@@ -273,30 +303,7 @@ public class UserService implements IUserService {
         return user.getRoles();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public boolean userHasRole(UUID userId, String roleName) {
-        User user = getUserById(userId);
-        return user.getRoles().stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
-    }
-
     // SEARCH AND FILTER
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UserDto> searchUsers(String email, String firstName, String lastName, String roleName, int page,
-            int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
-        Page<User> users;
-        if (roleName != null && !roleName.trim().isEmpty()) {
-            users = userRepository.findByRoleName(roleName, pageable);
-        } else {
-            users = userRepository.searchUsers(email, firstName, lastName, pageable);
-        }
-        return users.map(this::convertUserToDto);
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -308,7 +315,8 @@ public class UserService implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserDto> getUsersByRole(String roleName, int page, int size) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
+        User currentUser = jwtExtractor.getCurrentUserFromJwt()
+                .orElseThrow(() -> new SecurityException("User not found"));
         if (!currentUser.hasRole("ADMIN")) {
             throw new SecurityException("Only admins can view users by role");
         }
@@ -317,75 +325,68 @@ public class UserService implements IUserService {
         return users.map(this::convertUserToDto);
     }
 
-    // STATISTICS AND ANALYTICS
+    // NEW EMAIL VERIFICATION METHODS
 
     @Override
-    @Transactional(readOnly = true)
-    public UserStatisticsDto getUserStatistics() {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
-        if (!currentUser.hasRole("ADMIN")) {
-            throw new SecurityException("Only admins can view user statistics");
-        }
-        UserStatisticsDto stats = new UserStatisticsDto();
-
-        stats.setTotalUsers(userRepository.count());
-        stats.setActiveUsers(userRepository.countByIsActive(true));
-        stats.setInactiveUsers(userRepository.countByIsActive(false));
-        stats.setVerifiedUsers(userRepository.countByIsEmailVerified(true));
-        stats.setUnverifiedUsers(userRepository.countByIsEmailVerified(false));
-        stats.setLockedUsers(userRepository.countLockedUsers(LocalDateTime.now()));
-
-        LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        LocalDateTime weekStart = today.minusDays(7);
-        LocalDateTime monthStart = today.minusDays(30);
-
-        stats.setUsersCreatedToday(userRepository.countUsersCreatedAfter(today));
-        stats.setUsersCreatedThisWeek(userRepository.countUsersCreatedAfter(weekStart));
-        stats.setUsersCreatedThisMonth(userRepository.countUsersCreatedAfter(monthStart));
-
-        return stats;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long getUserCount(Boolean isActive, Boolean isEmailVerified) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
-        if (!currentUser.hasRole("ADMIN")) {
-            throw new SecurityException("Only admins can view user counts");
-        }
-        if (isActive != null && isEmailVerified != null) {
-            return userRepository.countByIsActiveAndIsEmailVerified(isActive, isEmailVerified);
-        } else if (isActive != null) {
-            return userRepository.countByIsActive(isActive);
-        } else if (isEmailVerified != null) {
-            return userRepository.countByIsEmailVerified(isEmailVerified);
-        } else {
-            return userRepository.count();
-        }
-    }
-
-    // AUDIT AND HISTORY
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<LoginHistoryDto> getUserLoginHistory(UUID userId, int page, int size) {
-        User currentUser = jwtExtractor.getCurrentUserFromJwt().orElseThrow(() -> new SecurityException("User not found"));
-        if (!currentUser.hasRole("ADMIN") && !currentUser.getId().equals(userId)) {
-            throw new SecurityException("Only admins can view other users' login history");
-        }
-        // For simplicity, returning empty page. In production, implement login history
-        // tracking
+    public void sendEmailVerification(UUID userId) {
         User user = getUserById(userId);
-        Pageable pageable = PageRequest.of(page, size);
-        return Page.empty(pageable);
-    }
 
-    @Override
-    public void recordUserLogin(UUID userId) {
-        User user = getUserById(userId);
-        user.setLastLoginAt(LocalDateTime.now());
-        user.setFailedLoginAttempts(0);
+        if (user.getIsEmailVerified()) {
+            throw new IllegalArgumentException("Email is already verified");
+        }
+
+        // Generate new token
+        user.generateEmailVerificationToken();
         userRepository.save(user);
-        log.info("Login recorded for user ID: {}", userId);
+
+        // Publish event to notification service
+        EmailVerificationRequestEvent event = EmailVerificationRequestEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .verificationToken(user.getEmailVerificationToken())
+                .verificationUrl("http://localhost:3000/verify-email?token=" + user.getEmailVerificationToken())
+                .build();
+
+        eventPublisher.publishEmailVerificationRequest(event);
+
+        log.info("Email verification sent for user ID: {}", userId);
     }
+
+    @Override
+    public void resendEmailVerification(UUID userId) {
+        User user = getUserById(userId);
+
+        if (user.getIsEmailVerified()) {
+            throw new IllegalArgumentException("Email is already verified");
+        }
+
+        // Generate new token
+        user.generateEmailVerificationToken();
+        userRepository.save(user);
+
+        // Publish event to notification service
+        EmailVerificationRequestEvent event = EmailVerificationRequestEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .verificationToken(user.getEmailVerificationToken())
+                .verificationUrl("http://localhost:3000/verify-email?token=" + user.getEmailVerificationToken())
+                .build();
+
+        eventPublisher.publishEmailVerificationRequest(event);
+
+        log.info("Email verification resent for user ID: {}", userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isVerificationTokenValid(String token) {
+        return userRepository.findByEmailVerificationToken(token)
+                .map(User::isEmailVerificationTokenValid)
+                .orElse(false);
+    }
+
 }
