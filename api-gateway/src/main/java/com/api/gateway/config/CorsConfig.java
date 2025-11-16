@@ -1,4 +1,4 @@
-package com.user.service.users_service.config;
+package com.api.gateway.config;
 
 import java.util.List;
 import java.util.Arrays;
@@ -52,3 +52,4 @@ public class CorsConfig {
     }
 
 }
+

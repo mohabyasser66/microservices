@@ -1,13 +1,26 @@
 package com.product.service.product_service.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class InventoryResponse {
+    private UUID id;
     private String skuCode;
     private Integer quantity;
+    private Integer reservedQuantity;
+    private Integer availableQuantity;
+    private String productName;
+    private String description;
+    private Double price;
+    private LocalDateTime updatedAt;
 }

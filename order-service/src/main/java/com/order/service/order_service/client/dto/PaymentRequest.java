@@ -6,22 +6,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 
-/**
- * Payment request DTO for payment processing
- */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class PaymentRequest {
+
     private UUID orderId;
-    private String orderNumber;
+    private UUID userId;
     private BigDecimal amount;
     private String currency;
-    private String paymentMethod; // CREDIT_CARD, PAYPAL, BANK_TRANSFER, etc.
-    private UUID userId;
+    private String paymentMethod;
+    private Map<String, String> paymentDetails;
+    private String description;
     private String customerEmail;
 
     // Credit card details (if applicable)
@@ -42,7 +42,6 @@ public class PaymentRequest {
     private String billingCountry;
 
     // Additional payment details
-    private String description;
     private String callbackUrl;
     private String failureUrl;
 }

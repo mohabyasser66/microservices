@@ -24,13 +24,8 @@ public class OrderRequest {
     @NotEmpty(message = "Order must contain at least one item")
     private List<OrderItemRequest> orderItems;
 
-    @Valid
-    @NotNull(message = "Shipping address is required")
-    private ShippingAddressRequest shippingAddress;
-
-    @Valid
-    @NotNull(message = "Billing address is required")
-    private BillingAddressRequest billingAddress;
+    @NotBlank
+    private String address;
 
     @Size(max = 500, message = "Customer notes cannot exceed 500 characters")
     private String customerNotes;

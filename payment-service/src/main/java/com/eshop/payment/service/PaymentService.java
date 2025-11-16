@@ -4,8 +4,9 @@ import com.eshop.payment.dto.*;
 import com.eshop.payment.entity.Payment;
 import com.eshop.payment.enums.PaymentMethod;
 import com.eshop.payment.enums.PaymentStatus;
+import com.eshop.payment.gateway.PaymentStrategyContext;
 import com.eshop.payment.repository.PaymentRepository;
-import com.eshop.payment.strategy.PaymentStrategyContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +17,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Simplified Payment Service using Strategy Pattern + Database
- * Combines the flexibility of Strategy Pattern with the reliability of database persistence
- */
 @Service
 @Transactional
 public class PaymentService {
@@ -32,9 +29,6 @@ public class PaymentService {
     @Autowired
     private PaymentStrategyContext strategyContext;
 
-    /**
-     * Process payment using Strategy Pattern + Database persistence
-     */
     public PaymentGatewayResponse processPayment(PaymentGatewayRequest request) {
         log.info("Processing payment for order: {}, amount: {} {}", 
                 request.getOrderId(), request.getAmount(), request.getCurrency());
@@ -67,9 +61,6 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Process refund using Strategy Pattern + Database persistence
-     */
     public RefundGatewayResponse processRefund(RefundGatewayRequest request) {
         log.info("Processing refund for transaction: {}, amount: {}", 
                 request.getOriginalTransactionId(), request.getRefundAmount());
@@ -84,7 +75,6 @@ public class PaymentService {
         }
 
         try {
-            // Use Strategy Pattern to process refund
             RefundGatewayResponse response = strategyContext.processRefund(request);
             
             // Update payment record with refund info
@@ -107,39 +97,24 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Find payment by order ID
-     */
     public Payment findByOrderId(UUID orderId) {
         return paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for order: " + orderId));
     }
 
-    /**
-     * Find payment by transaction ID
-     */
     public Payment findByTransactionId(String transactionId) {
         return paymentRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for transaction: " + transactionId));
     }
 
-    /**
-     * Get payment history for user
-     */
     public List<Payment> getPaymentHistory(UUID userId) {
         return paymentRepository.findByUserId(userId);
     }
 
-    /**
-     * Check if order has successful payment
-     */
     public boolean hasSuccessfulPayment(UUID orderId) {
         return paymentRepository.existsByOrderIdAndPaymentStatus(orderId, PaymentStatus.SUCCESS);
     }
 
-    /**
-     * Validate payment method using Strategy Pattern
-     */
     public boolean validatePaymentMethod(PaymentGatewayRequest request) {
         try {
             return strategyContext.validatePaymentMethod(request);
@@ -149,9 +124,6 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Get which gateway would be selected for a request
-     */
     public String getSelectedGateway(PaymentGatewayRequest request) {
         return strategyContext.getSelectedGatewayName(request);
     }
@@ -196,8 +168,12 @@ public class PaymentService {
                 return PaymentMethod.PAYPAL;
             } else if (request.getPaymentDetails().containsKey("card_number")) {
                 return PaymentMethod.CREDIT_CARD;
+            } else if(request.getPaymentDetails().containsKey("stripe")) {
+                return PaymentMethod.STRIPE;
+            } else if(request.getPaymentDetails().containsKey("cash")) {
+                return PaymentMethod.CASH_ON_DELIVERY;
             }
         }
-        return PaymentMethod.CREDIT_CARD; // Default to credit card
+        return PaymentMethod.CREDIT_CARD; // Default
     }
 }

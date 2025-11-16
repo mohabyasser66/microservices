@@ -21,6 +21,16 @@
     </properties>
 
     <dependencies>
+        <dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+        
+        <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
         <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -82,10 +92,10 @@
         </dependency>
 
         <!-- Eureka Client -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- Circuit Breaker -->
         <dependency>

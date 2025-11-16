@@ -2,9 +2,14 @@ package com.eshop.payment.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+import lombok.Data;
+
+@Data
 public class PaymentGatewayResponse {
     
+    private UUID orderId;
     private boolean success;
     private String transactionId;
     private BigDecimal amount;
@@ -17,7 +22,8 @@ public class PaymentGatewayResponse {
     // Constructors
     public PaymentGatewayResponse() {}
     
-    public PaymentGatewayResponse(boolean success, String transactionId, String gatewayName) {
+    public PaymentGatewayResponse(UUID orderId, boolean success, String transactionId, String gatewayName) {
+        this.orderId = orderId;
         this.success = success;
         this.transactionId = transactionId;
         this.gatewayName = gatewayName;
@@ -25,82 +31,17 @@ public class PaymentGatewayResponse {
     }
     
     // Static factory methods
-    public static PaymentGatewayResponse success(String transactionId, String gatewayName) {
-        PaymentGatewayResponse response = new PaymentGatewayResponse(true, transactionId, gatewayName);
+    public static PaymentGatewayResponse success(UUID orderId, String transactionId, String gatewayName) {
+        PaymentGatewayResponse response = new PaymentGatewayResponse(orderId, true, transactionId, gatewayName);
         response.setMessage("Payment processed successfully");
         return response;
     }
     
-    public static PaymentGatewayResponse failure(String errorCode, String message, String gatewayName) {
-        PaymentGatewayResponse response = new PaymentGatewayResponse(false, null, gatewayName);
+    public static PaymentGatewayResponse failure(UUID orderId, String errorCode, String message, String gatewayName) {
+        PaymentGatewayResponse response = new PaymentGatewayResponse(orderId, false, null, gatewayName);
         response.setErrorCode(errorCode);
         response.setMessage(message);
         return response;
-    }
-    
-    // Getters and Setters
-    public boolean isSuccess() {
-        return success;
-    }
-    
-    public void setSuccess(boolean success) {
-        this.success = success;
-    }
-    
-    public String getTransactionId() {
-        return transactionId;
-    }
-    
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-    }
-    
-    public BigDecimal getAmount() {
-        return amount;
-    }
-    
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-    
-    public String getCurrency() {
-        return currency;
-    }
-    
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-    
-    public String getGatewayName() {
-        return gatewayName;
-    }
-    
-    public void setGatewayName(String gatewayName) {
-        this.gatewayName = gatewayName;
-    }
-    
-    public String getMessage() {
-        return message;
-    }
-    
-    public void setMessage(String message) {
-        this.message = message;
-    }
-    
-    public String getErrorCode() {
-        return errorCode;
-    }
-    
-    public void setErrorCode(String errorCode) {
-        this.errorCode = errorCode;
-    }
-    
-    public LocalDateTime getProcessedAt() {
-        return processedAt;
-    }
-    
-    public void setProcessedAt(LocalDateTime processedAt) {
-        this.processedAt = processedAt;
     }
     
     @Override

@@ -1,7 +1,6 @@
 package com.inventory.service.inventory_service.controller;
 
 import com.inventory.service.inventory_service.dto.*;
-import com.inventory.service.inventory_service.model.Inventory;
 import com.inventory.service.inventory_service.service.IInventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +17,6 @@ import java.util.List;
 public class InventoryController {
     private final IInventoryService inventoryService;
 
-    // For other services (like order service)
     @GetMapping("/check")
     @ResponseStatus(HttpStatus.OK)
     public boolean isInStock(@RequestParam String skuCode, @RequestParam Integer quantity) {
@@ -77,8 +75,8 @@ public class InventoryController {
 
     @GetMapping("/{skuCode}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<Inventory> getInventoryBySkuCode(@PathVariable String skuCode) {
-        Inventory inventory = inventoryService.getInventoryBySkuCode(skuCode);
+    public ResponseEntity<InventoryResponse> getInventoryBySkuCode(@PathVariable String skuCode) {
+        InventoryResponse inventory = inventoryService.getInventoryBySkuCode(skuCode);
         if (inventory != null) {
             return ResponseEntity.ok(inventory);
         } else {
@@ -88,20 +86,9 @@ public class InventoryController {
 
     @GetMapping("/{skuCode}/details")
     public ResponseEntity<InventoryResponse> getInventoryDetails(@PathVariable String skuCode) {
-        Inventory inventory = inventoryService.getInventoryBySkuCode(skuCode);
+        InventoryResponse inventory = inventoryService.getInventoryBySkuCode(skuCode);
         if (inventory != null) {
-            InventoryResponse response = InventoryResponse.builder()
-                    .id(inventory.getId())
-                    .skuCode(inventory.getSkuCode())
-                    .quantity(inventory.getQuantity())
-                    .reservedQuantity(inventory.getReservedQuantity())
-                    .availableQuantity(inventory.getAvailableQuantity())
-                    .productName(inventory.getProductName())
-                    .description(inventory.getDescription())
-                    .price(inventory.getPrice())
-                    .updatedAt(inventory.getUpdatedAt())
-                    .build();
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(inventory);
         }
         return ResponseEntity.notFound().build();
     }

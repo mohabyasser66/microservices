@@ -16,7 +16,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/payments")
-@CrossOrigin(origins = "*")
 public class PaymentController {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
@@ -33,7 +32,7 @@ public class PaymentController {
             // Check if order already has successful payment
             if (request.getOrderId() != null && paymentService.hasSuccessfulPayment(request.getOrderId())) {
                 log.warn("Order {} already has a successful payment", request.getOrderId());
-                PaymentGatewayResponse response = PaymentGatewayResponse.failure("DUPLICATE_PAYMENT", 
+                PaymentGatewayResponse response = PaymentGatewayResponse.failure(request.getOrderId(), "DUPLICATE_PAYMENT", 
                     "Order already has a successful payment", "SYSTEM");
                 return ResponseEntity.badRequest().body(response);
             }
@@ -43,7 +42,7 @@ public class PaymentController {
             
         } catch (Exception e) {
             log.error("Error processing payment", e);
-            PaymentGatewayResponse errorResponse = PaymentGatewayResponse.failure("PAYMENT_ERROR", 
+            PaymentGatewayResponse errorResponse = PaymentGatewayResponse.failure(request.getOrderId(), "PAYMENT_ERROR", 
                 "Error processing payment: " + e.getMessage(), "SYSTEM");
             return ResponseEntity.badRequest().body(errorResponse);
         }

@@ -19,116 +19,56 @@ import java.util.UUID;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    /**
-     * Find payment by order ID
-     */
     Optional<Payment> findByOrderId(UUID orderId);
 
-    /**
-     * Find all payments by user ID
-     */
     List<Payment> findByUserId(UUID userId);
 
-    /**
-     * Find payments by user ID with pagination
-     */
     Page<Payment> findByUserId(UUID userId, Pageable pageable);
 
-    /**
-     * Find payment by transaction ID
-     */
     Optional<Payment> findByTransactionId(String transactionId);
 
-    /**
-     * Find payments by status
-     */
     List<Payment> findByPaymentStatus(PaymentStatus status);
 
-    /**
-     * Find payments by status with pagination
-     */
     Page<Payment> findByPaymentStatus(PaymentStatus status, Pageable pageable);
 
-    /**
-     * Find payments by user ID and status
-     */
     List<Payment> findByUserIdAndPaymentStatus(UUID userId, PaymentStatus status);
 
-    /**
-     * Find payments within date range
-     */
     @Query("SELECT p FROM Payment p WHERE p.createdAt BETWEEN :startDate AND :endDate")
     List<Payment> findPaymentsBetweenDates(@Param("startDate") LocalDateTime startDate, 
                                           @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Find payments within date range with pagination
-     */
     @Query("SELECT p FROM Payment p WHERE p.createdAt BETWEEN :startDate AND :endDate")
     Page<Payment> findPaymentsBetweenDates(@Param("startDate") LocalDateTime startDate, 
                                           @Param("endDate") LocalDateTime endDate, 
                                           Pageable pageable);
 
-    /**
-     * Find refundable payments for user
-     */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.paymentStatus = 'SUCCESS' " +
            "AND (p.refundedAmount IS NULL OR p.refundedAmount < p.amount)")
     List<Payment> findRefundablePaymentsByUserId(@Param("userId") UUID userId);
 
-    /**
-     * Calculate total payment amount by user
-     */
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.userId = :userId AND p.paymentStatus = 'SUCCESS'")
     BigDecimal calculateTotalPaymentsByUserId(@Param("userId") UUID userId);
 
-    /**
-     * Calculate total refunded amount by user
-     */
     @Query("SELECT SUM(p.refundedAmount) FROM Payment p WHERE p.userId = :userId AND p.refundedAmount > 0")
     BigDecimal calculateTotalRefundsByUserId(@Param("userId") UUID userId);
 
-    /**
-     * Find failed payments for retry
-     */
     @Query("SELECT p FROM Payment p WHERE p.paymentStatus = 'FAILED' AND p.createdAt > :cutoffDate")
     List<Payment> findFailedPaymentsAfterDate(@Param("cutoffDate") LocalDateTime cutoffDate);
 
-    /**
-     * Find pending payments older than specified time
-     */
     @Query("SELECT p FROM Payment p WHERE p.paymentStatus = 'PENDING' AND p.createdAt < :cutoffDate")
     List<Payment> findStuckPendingPayments(@Param("cutoffDate") LocalDateTime cutoffDate);
 
-    /**
-     * Count payments by status
-     */
     long countByPaymentStatus(PaymentStatus status);
 
-    /**
-     * Count payments by user and status
-     */
     long countByUserIdAndPaymentStatus(UUID userId, PaymentStatus status);
 
-    /**
-     * Find payments with amounts greater than specified value
-     */
     @Query("SELECT p FROM Payment p WHERE p.amount > :amount AND p.paymentStatus = 'SUCCESS'")
     List<Payment> findHighValuePayments(@Param("amount") BigDecimal amount);
 
-    /**
-     * Find recent payments by user
-     */
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId ORDER BY p.createdAt DESC")
     List<Payment> findRecentPaymentsByUserId(@Param("userId") UUID userId, Pageable pageable);
 
-    /**
-     * Check if payment exists by order ID and status
-     */
     boolean existsByOrderIdAndPaymentStatus(UUID orderId, PaymentStatus status);
 
-    /**
-     * Find payments by multiple order IDs
-     */
     List<Payment> findByOrderIdIn(List<UUID> orderIds);
 }

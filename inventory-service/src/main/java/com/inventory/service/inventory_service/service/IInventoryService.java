@@ -1,14 +1,13 @@
 package com.inventory.service.inventory_service.service;
 
 import com.inventory.service.inventory_service.dto.*;
-import com.inventory.service.inventory_service.model.Inventory;
 
 import java.util.List;
 
 public interface IInventoryService {
     boolean isInStock(String skuCode, Integer quantity);
 
-    Inventory getInventoryBySkuCode(String skuCode);
+    InventoryResponse getInventoryBySkuCode(String skuCode);
 
     List<StockCheckResponse> checkMultipleStock(List<StockCheckRequest> requests);
 

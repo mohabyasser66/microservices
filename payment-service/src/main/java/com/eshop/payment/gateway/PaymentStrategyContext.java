@@ -1,7 +1,7 @@
-package com.eshop.payment.strategy;
+package com.eshop.payment.gateway;
 
 import com.eshop.payment.dto.*;
-import com.eshop.payment.gateway.PaymentGateway;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -60,7 +60,7 @@ public class PaymentStrategyContext {
             return stripeStrategy;
         }
         
-        // Based on amount (example business logic)
+        // Based on amount
         if (request.getAmount() != null && request.getAmount().compareTo(new java.math.BigDecimal("1000")) > 0) {
             logger.debug("High amount payment (>${}), selecting Stripe for better processing", 1000);
             return stripeStrategy;

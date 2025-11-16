@@ -6,6 +6,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -13,6 +16,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "payments")
 public class Payment {
@@ -84,127 +89,6 @@ public class Payment {
         this.userId = userId;
         this.amount = amount;
         this.paymentMethod = paymentMethod;
-    }
-
-    // Getters and Setters
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getOrderId() {
-        return orderId;
-    }
-
-    public void setOrderId(UUID orderId) {
-        this.orderId = orderId;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(PaymentMethod paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public PaymentStatus getPaymentStatus() {
-        return paymentStatus;
-    }
-
-    public void setPaymentStatus(PaymentStatus paymentStatus) {
-        this.paymentStatus = paymentStatus;
-    }
-
-    public String getTransactionId() {
-        return transactionId;
-    }
-
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public String getGatewayResponseCode() {
-        return gatewayResponseCode;
-    }
-
-    public void setGatewayResponseCode(String gatewayResponseCode) {
-        this.gatewayResponseCode = gatewayResponseCode;
-    }
-
-    public String getGatewayResponseMessage() {
-        return gatewayResponseMessage;
-    }
-
-    public void setGatewayResponseMessage(String gatewayResponseMessage) {
-        this.gatewayResponseMessage = gatewayResponseMessage;
-    }
-
-    public BigDecimal getRefundedAmount() {
-        return refundedAmount;
-    }
-
-    public void setRefundedAmount(BigDecimal refundedAmount) {
-        this.refundedAmount = refundedAmount;
-    }
-
-    public String getRefundTransactionId() {
-        return refundTransactionId;
-    }
-
-    public void setRefundTransactionId(String refundTransactionId) {
-        this.refundTransactionId = refundTransactionId;
-    }
-
-    public String getFailureReason() {
-        return failureReason;
-    }
-
-    public void setFailureReason(String failureReason) {
-        this.failureReason = failureReason;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public LocalDateTime getProcessedAt() {
-        return processedAt;
-    }
-
-    public void setProcessedAt(LocalDateTime processedAt) {
-        this.processedAt = processedAt;
     }
 
     // Utility methods

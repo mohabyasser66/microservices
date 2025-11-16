@@ -23,9 +23,8 @@ public interface PaymentClient {
                                 paymentRequest.getOrderId(), throwable.getMessage());
                 return PaymentResponse.builder()
                                 .orderId(paymentRequest.getOrderId())
-                                .status("FAILED")
-                                .message("Payment service unavailable")
                                 .success(false)
+                                .message("Payment service unavailable")
                                 .build();
         }
 }

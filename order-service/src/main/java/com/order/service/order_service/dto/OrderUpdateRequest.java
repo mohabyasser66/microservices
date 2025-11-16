@@ -1,6 +1,5 @@
 package com.order.service.order_service.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,19 +15,16 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class OrderUpdateRequest {
 
-    @Valid
-    private ShippingAddressRequest shippingAddress;
-
-    @Valid
-    private BillingAddressRequest billingAddress;
-
     @Size(max = 500, message = "Customer notes cannot exceed 500 characters")
     private String customerNotes;
 
     @Size(max = 1000, message = "Admin notes cannot exceed 1000 characters")
     private String adminNotes;
 
-    private String shippingMethod; // STANDARD, EXPRESS, OVERNIGHT
+    private String shippingMethod;
+
+    @Size(max = 200, message = "Address cannot exceed 200 characters")
+    private String address;
 
     @DecimalMin(value = "0.0", message = "Shipping cost must be non-negative")
     private BigDecimal shippingCost;

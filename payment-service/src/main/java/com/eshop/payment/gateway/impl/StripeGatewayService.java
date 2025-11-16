@@ -35,7 +35,7 @@ public class StripeGatewayService implements PaymentGateway {
             
             // Stripe-specific validation
             if (!validateStripePayment(request)) {
-                return PaymentGatewayResponse.failure("INVALID_CARD_DETAILS", 
+                return PaymentGatewayResponse.failure(request.getOrderId(), "INVALID_CARD_DETAILS", 
                     "Invalid card details", GATEWAY_NAME);
             }
             
@@ -43,25 +43,25 @@ public class StripeGatewayService implements PaymentGateway {
             boolean success = simulateStripePayment(request);
             
             if (success) {
-                PaymentGatewayResponse response = PaymentGatewayResponse.success(generateStripeTransactionId(), GATEWAY_NAME);
+                PaymentGatewayResponse response = PaymentGatewayResponse.success(request.getOrderId(), generateStripeTransactionId(), GATEWAY_NAME);
                 response.setAmount(request.getAmount());
                 response.setCurrency(request.getCurrency());
                 response.setProcessedAt(LocalDateTime.now());
                 logger.info("Stripe payment successful: {}", response.getTransactionId());
                 return response;
             } else {
-                return PaymentGatewayResponse.failure("STRIPE_DECLINED", 
+                return PaymentGatewayResponse.failure(request.getOrderId(), "STRIPE_DECLINED", 
                     "Stripe payment declined", GATEWAY_NAME);
             }
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.error("Stripe payment processing interrupted", e);
-            return PaymentGatewayResponse.failure("PROCESSING_INTERRUPTED", 
+            return PaymentGatewayResponse.failure(request.getOrderId(), "PROCESSING_INTERRUPTED", 
                 "Payment processing interrupted", GATEWAY_NAME);
         } catch (Exception e) {
             logger.error("Stripe payment processing failed", e);
-            return PaymentGatewayResponse.failure("STRIPE_ERROR", 
+            return PaymentGatewayResponse.failure(request.getOrderId(), "STRIPE_ERROR", 
                 "Stripe service unavailable", GATEWAY_NAME);
         }
     }
@@ -75,7 +75,6 @@ public class StripeGatewayService implements PaymentGateway {
             // Simulate network delay
             Thread.sleep(300 + (long) (Math.random() * 200));
             
-            // Mock Stripe refund processing  
             boolean success = simulateStripeRefund(request);
             
             if (success) {

@@ -1,8 +1,5 @@
 package com.eshop.payment.enums;
 
-/**
- * Payment status enumeration
- */
 public enum PaymentStatus {
     PENDING,
     PROCESSING,

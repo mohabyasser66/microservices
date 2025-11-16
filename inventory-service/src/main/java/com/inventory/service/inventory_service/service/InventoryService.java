@@ -26,11 +26,11 @@ public class InventoryService implements IInventoryService {
         return inventory != null && inventory.getAvailableQuantity() >= quantity;
     }
 
-    public Inventory getInventoryBySkuCode(String skuCode) {
-        return inventoryRepository.findBySkuCode(skuCode);
+    public InventoryResponse getInventoryBySkuCode(String skuCode) {
+        Inventory product = inventoryRepository.findBySkuCode(skuCode);
+        return mapToResponse(product);
     }
 
-    // New methods for order service integration
     @Transactional(readOnly = true)
     public List<StockCheckResponse> checkMultipleStock(List<StockCheckRequest> requests) {
         return requests.stream()

@@ -1,4 +1,4 @@
-package com.inventory.service.inventory_service.config;
+package com.eshop.payment.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt());
 

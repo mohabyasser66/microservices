@@ -35,7 +35,7 @@ public class PayPalGatewayService implements PaymentGateway {
             
             // PayPal-specific validation
             if (!validatePayPalPayment(request)) {
-                return PaymentGatewayResponse.failure("INVALID_PAYPAL_DETAILS", 
+                return PaymentGatewayResponse.failure(request.getOrderId(), "INVALID_PAYPAL_DETAILS", 
                     "Invalid PayPal payment details", GATEWAY_NAME);
             }
             
@@ -43,25 +43,25 @@ public class PayPalGatewayService implements PaymentGateway {
             boolean success = simulatePayPalPayment(request);
             
             if (success) {
-                PaymentGatewayResponse response = PaymentGatewayResponse.success(generatePayPalTransactionId(), GATEWAY_NAME);
+                PaymentGatewayResponse response = PaymentGatewayResponse.success(request.getOrderId(), generatePayPalTransactionId(), GATEWAY_NAME);
                 response.setAmount(request.getAmount());
                 response.setCurrency(request.getCurrency());
                 response.setProcessedAt(LocalDateTime.now());
                 logger.info("PayPal payment successful: {}", response.getTransactionId());
                 return response;
             } else {
-                return PaymentGatewayResponse.failure("PAYPAL_DECLINED", 
+                return PaymentGatewayResponse.failure(request.getOrderId(), "PAYPAL_DECLINED", 
                     "PayPal payment declined", GATEWAY_NAME);
             }
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.error("PayPal payment processing interrupted", e);
-            return PaymentGatewayResponse.failure("PROCESSING_INTERRUPTED", 
+            return PaymentGatewayResponse.failure(request.getOrderId(), "PROCESSING_INTERRUPTED", 
                 "Payment processing interrupted", GATEWAY_NAME);
         } catch (Exception e) {
             logger.error("PayPal payment processing failed", e);
-            return PaymentGatewayResponse.failure("PAYPAL_ERROR", 
+            return PaymentGatewayResponse.failure(request.getOrderId(), "PAYPAL_ERROR", 
                 "PayPal service unavailable", GATEWAY_NAME);
         }
     }
@@ -151,7 +151,6 @@ public class PayPalGatewayService implements PaymentGateway {
         return Math.random() > 0.1;
     }
 
-    // Mock PayPal refund simulation
     private boolean simulatePayPalRefund(RefundGatewayRequest request) {
         // Check if original transaction exists (mock check)
         String originalTxn = request.getOriginalTransactionId();
