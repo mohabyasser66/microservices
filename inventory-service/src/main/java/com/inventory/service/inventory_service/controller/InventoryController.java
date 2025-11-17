@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +60,7 @@ public class InventoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InventoryResponse> createOrUpdateInventory(
             @RequestBody InventoryRequest request) {
         log.info("Creating/Updating inventory for SKU: {}", request.getSkuCode());
@@ -67,6 +69,7 @@ public class InventoryController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<InventoryResponse>> getAllInventory() {
         log.info("Fetching all inventory items");
         List<InventoryResponse> inventory = inventoryService.getAllInventory();
@@ -82,14 +85,5 @@ public class InventoryController {
         } else {
             return ResponseEntity.notFound().build();
         }
-    }
-
-    @GetMapping("/{skuCode}/details")
-    public ResponseEntity<InventoryResponse> getInventoryDetails(@PathVariable String skuCode) {
-        InventoryResponse inventory = inventoryService.getInventoryBySkuCode(skuCode);
-        if (inventory != null) {
-            return ResponseEntity.ok(inventory);
-        }
-        return ResponseEntity.notFound().build();
     }
 }

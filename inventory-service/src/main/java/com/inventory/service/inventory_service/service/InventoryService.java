@@ -94,6 +94,7 @@ public class InventoryService implements IInventoryService {
                 .collect(Collectors.toList());
     }
 
+    // Helper Methods
     private StockCheckResponse checkSingleStock(StockCheckRequest request) {
         Inventory inventory = inventoryRepository.findBySkuCode(request.getSkuCode());
         boolean inStock = inventory != null && inventory.getAvailableQuantity() >= request.getRequestedQuantity();
