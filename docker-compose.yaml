@@ -1,4 +1,102 @@
-FROM ubuntu:latest
-LABEL authors="Administrator"
+version: "3.8"
 
-ENTRYPOINT ["top", "-b"]
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/bitnami
+
+  kafka:
+    image: bitnami/kafka:3
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka-data:/bitnami
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:0.4.0
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8088:8080"
+    depends_on:
+      - kafka
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.1.1
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command: ["start-dev"]
+    ports:
+      - "8085:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+
+  mysql-order:
+    image: mysql:8
+    container_name: mysql-order
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: order_service
+      MYSQL_USER: order
+      MYSQL_PASSWORD: orderpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-order-data:/var/lib/mysql
+
+  mysql-inventory:
+    image: mysql:8
+    container_name: mysql-inventory
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: inventory_service
+      MYSQL_USER: inventory
+      MYSQL_PASSWORD: invpass
+    ports:
+      - "3316:3306"
+    volumes:
+      - mysql-inventory-data:/var/lib/mysql
+
+  mysql-users:
+    image: mysql:8
+    container_name: mysql-users
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: users_service
+      MYSQL_USER: users
+      MYSQL_PASSWORD: userspass
+    ports:
+      - "3326:3306"
+    volumes:
+      - mysql-users-data:/var/lib/mysql
+
+  mongo-product:
+    image: mongo:6
+    container_name: mongo-product
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-product-data:/data/db
+
+volumes:
+  zookeeper-data:
+  kafka-data:
+  keycloak-data:
+  mysql-order-data:
+  mysql-inventory-data:
+  mysql-users-data:
+  mongo-product-data:
