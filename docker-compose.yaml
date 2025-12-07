@@ -45,6 +45,13 @@ services:
     volumes:
       - keycloak-data:/opt/keycloak/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
   mysql-order:
     image: mysql:8
     container_name: mysql-order
@@ -96,6 +103,7 @@ volumes:
   zookeeper-data:
   kafka-data:
   keycloak-data:
+  redis-data:
   mysql-order-data:
   mysql-inventory-data:
   mysql-users-data:
